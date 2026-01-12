@@ -1,56 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Excel Editor</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css">
-<style>
-  html, body { height: 100%; margin: 0; }
-  #hot { width: 100%; height: 100%; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel Editor</title>
+
+  <!-- Handsontable for Excel-like editing -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@11.1.0/dist/handsontable.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/handsontable@11.1.0/dist/handsontable.min.js"></script>
+
+  <!-- XLSX for reading Excel files -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #hot {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
 </head>
 <body>
   <div id="hot"></div>
-  <input type="file" id="fileInput" accept=".xlsx,.xls" style="position:absolute;top:10px;right:10px; z-index:1000">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+
   <script>
-    const container = document.getElementById('hot');
-    let hot = new Handsontable(container, {
-      data: [[]],
-      rowHeaders: true,
-      colHeaders: true,
-      licenseKey: 'non-commercial-and-evaluation',
-      contextMenu: true,
-      manualColumnResize: true,
-      manualRowResize: true,
-    });
+    // Get the Excel file URL from query parameter
+    const params = new URLSearchParams(window.location.search);
+    const fileUrl = params.get('file');
 
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const sheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        hot.loadData(sheetData);
-      };
-      reader.readAsArrayBuffer(file);
-    });
+    if (!fileUrl) {
+      document.body.innerHTML = '<p style="color:red;text-align:center;margin-top:50px;">No file URL provided!</p>';
+    } else {
+      fetch(fileUrl)
+        .then(res => res.arrayBuffer())
+        .then(data => {
+          // Read Excel file
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
-    function exportExcel() {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(hot.getData());
-      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-      XLSX.writeFile(wb, 'EditedSheet.xlsx');
+          // Render Handsontable
+          const container = document.getElementById('hot');
+          new Handsontable(container, {
+            data: sheet,
+            rowHeaders: true,
+            colHeaders: true,
+            contextMenu: true,       // Right-click menu
+            licenseKey: 'non-commercial-and-evaluation',
+            manualRowResize: true,   // Allow row resize
+            manualColumnResize: true // Allow column resize
+          });
+        })
+        .catch(err => {
+          document.body.innerHTML = `<p style="color:red;text-align:center;margin-top:50px;">Failed to load file: ${err}</p>`;
+        });
     }
-
-    window.addEventListener('message', (event) => {
-      if (event.data === 'exportExcel') exportExcel();
-    });
   </script>
 </body>
 </html>
