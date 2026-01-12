@@ -36,7 +36,7 @@
     if (!fileUrl) {
       document.body.innerHTML = '<p style="color:red;text-align:center;margin-top:50px;">No file URL provided!</p>';
     } else {
-      fetch(fileUrl)
+      fetch('https://cors-anywhere.herokuapp.com/' + fileUrl)
         .then(res => res.arrayBuffer())
         .then(data => {
           // Read Excel file
