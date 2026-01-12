@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Editor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css">
+<style>
+  html, body { height: 100%; margin: 0; }
+  #hot { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+  <div id="hot"></div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" style="position:absolute;top:10px;right:10px; z-index:1000">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+  <script>
+    const container = document.getElementById('hot');
+    let hot = new Handsontable(container, {
+      data: [[]],
+      rowHeaders: true,
+      colHeaders: true,
+      licenseKey: 'non-commercial-and-evaluation',
+      contextMenu: true,
+      manualColumnResize: true,
+      manualRowResize: true,
+    });
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const sheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        hot.loadData(sheetData);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function exportExcel() {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(hot.getData());
+      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+      XLSX.writeFile(wb, 'EditedSheet.xlsx');
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.data === 'exportExcel') exportExcel();
+    });
+  </script>
+</body>
+</html>
